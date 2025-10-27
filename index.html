@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ΤΠΕ στην Εκπαίδευση</title>
+<style>
+  :root {
+    --ok: #1e7f31;
+    --bad: #b00020;
+    --ok-bg: #e7f5ea;
+    --bad-bg: #fde8ec;
+    --muted: #6b7280;
+  }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji"; line-height:1.5; margin:0; background:#fafafa; }
+  header { position:sticky; top:0; background:white; border-bottom:1px solid #eee; padding:12px 16px; z-index:10; text-align: center; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .wrap { max-width: 980px; margin: 16px auto; padding: 0 16px 80px; }
+  .q { background:white; border:1px solid #eee; border-radius:14px; padding:16px; margin:14px 0; box-shadow: 0 1px 1px rgba(0,0,0,0.03); }
+  .qid { display:inline-block; background:#f3f4f6; color:#111827; font-weight:600; padding:2px 8px; border-radius:999px; margin-right:8px; }
+  .qtext { font-size:16px; margin: 6px 0 8px; }
+  .opts { display:grid; gap:8px; margin-top: 8px; }
+  .opt { border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; display:flex; gap:10px; align-items:flex-start; cursor:pointer; transition: background .15s, border-color .15s; }
+  .opt input { margin-top: 3px; }
+  .opt.correct { background: var(--ok-bg); border-color: var(--ok); }
+  .opt.wrong { background: var(--bad-bg); border-color: var(--bad); }
+  .opt.disabled { opacity:.7; pointer-events:none; }
+  .badge { font-weight:700; font-variant-numeric: tabular-nums; }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .actions { display:flex; gap:8px; margin-top:10px; flex-wrap: wrap; }
+  button { background:#111827; color:white; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; }
+  button.secondary { background:#f3f4f6; color:#111827; }
+  .score { font-weight:700; }
+  .footer { margin-top: 20px; color:#6b7280; font-size: 13px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#f3f4f6; margin-right:6px; font-size:12px; }
+  .legend { margin-top:4px; font-size:12px; color:#6b7280; }
+</style>
+</head>
+<body>
+<header>
+  <img src="image.png" alt="Επετειακό Διαγώνισμα στη χρήση των ΤΠΕ" style="max-width: 100%; max-height: 150px; height: auto; margin-bottom: 10px;">
+  <h1>ΤΠΕ στην Εκπαίδευση — Επετειακό Διαγώνισμα</h1>
+  <div class="legend">
+     <span class="pill" style="background: var(--ok-bg); color: var(--ok); border:1px solid var(--ok);">Σωστό</span>
+    <span class="pill" style="background: var(--bad-bg); color: var(--bad); border:1px solid var(--bad);">Λάθος</span>
+  </div>
+</header>
+<div class="wrap">
+  <div id="counter" class="meta">Σωστές απαντήσεις: <span class="score" id="score">0</span> / <span id="total">0</span></div>
+  <div id="quiz"></div>
+  <div class="footer">
+    ✨✍️ Επετειακό Διαγώνισμα στις ΤΠΕ✍️✨
+  </div>
+</div>
+
+<script>
+/** * Τύποι ασκήσεων:
+ * - "boolean": ΣΩΣΤΟ/ΛΑΘΟΣ ή ΝΑΙ/ΟΧΙ (απλή δυαδική επιλογή)
+ * - "single": μία σωστή επιλογή (ραδιοκουμπιά)
+ * - "multiple": πολλαπλές σωστές (checkboxes)
+ */
+
+const QUESTIONS = [
+  // 1
+  { id: 1, type: "boolean", text: "Η Ε.Ε. δεν αναγνώρισε εγκαίρως την αναγκαιότητα ενσωμάτωσης των ΤΠΕ στην εκπαίδευση.", options: ["ΣΩΣΤΟ","ΛΑΘΟΣ"], correct: ["ΛΑΘΟΣ"] },
+  // 2
+  { id: 2, type: "single", text: "Η χρήση των ΤΠΕ στην εκπαίδευση ως αυτόνομο γνωστικό αντικείμενο μπορεί να αφορά:", options: [
+      "α. Τη διδασκαλία βασικών δεξιοτήτων χειρισμού Η/Υ",
+      "β. Τον Ψηφιακό γραμματισμό",
+      "γ. Τη χρήση των ΤΠΕ στη διοίκηση της εκπαίδευσης",
+      "δ. Το α και το β",
+      "ε. Όλα τα παραπάνω"
+    ], correct: ["δ. Το α και το β"] },
+  // 3
+  { id: 3, type: "single", text: "Ποιους εκπαιδευτικούς αφορά το τεχνοκρατικό/τεχνοκεντρικό μοντέλο εισαγωγής των ΤΠΕ;", options: ["Α. Τους πληροφορικούς","Β. Όλους τους εκπαιδευτικούς","Γ. Τους εκπαιδευτικούς της Τριτοβάθμιας εκπαίδευσης"], correct: ["Α. Τους πληροφορικούς"] },
+  // 4
+  { id: 4, type: "single", text: "Ποιο μοντέλο ενδείκνυται για νηπιακή και πρώτη σχολική ηλικία;", options: ["Α. Τεχνοκρατικό/τεχνοκεντρικό","Β. Ολιστικό","Γ. Πραγματολογικό/εφικτό"], correct: ["Β. Ολιστικό"] },
+  // 5
+  { id: 5, type: "single", text: "Ο Η/Υ μπορεί να λειτουργήσει ως Α) εξειδικευμένος συνεργάτης, Β) αυθεντικό περιβάλλον, Γ) μέσο κοινωνικοπολιτισμικής γλώσσας. Τι ισχύει;", options: ["1. Το (Α)","2. Το (Β)","3. Το (Γ)","4. Όλα τα παραπάνω"], correct: ["4. Όλα τα παραπάνω"] },
+  // 6
+  { id: 6, type: "single", text: "Επιλέξτε τη σωστή πρόταση (για ΤΠΕ στην εκπαίδευση):", options: [
+      "Α) Οι ΤΠΕ θεωρήθηκαν από πολύ νωρίς ως μέσα για τον νέο «ψηφιακό εγγραμματισμό».",
+      "Β) Αρχικά δόθηκε έμφαση στην τεχνολογική διάσταση, σταδιακά όμως αναπτύχθηκε πιο κριτική στάση.",
+      "Γ) Εισήχθησαν εξαρχής ολιστικά σε όλα τα γνωστικά αντικείμενα."
+    ], correct: ["Β) Αρχικά δόθηκε έμφαση στην τεχνολογική διάσταση, σταδιακά όμως αναπτύχθηκε πιο κριτική στάση."] },
+  // 7
+  { id: 7, type: "single", text: "Σωστός συνδυασμός μοντέλων εισαγωγής ΤΠΕ με προσεγγίσεις:", options: [
+      "Α. Τεχνοκρατικό-πληροφορική, Ολιστικό-μέσο στήριξης, Πραγματολογικό-μέσο στήριξης & αντικείμενο",
+      "Β. Τεχνοκρατικό-μέσο στήριξης, Ολιστικό-μέσο στήριξης & αντικείμενο, Πραγματολογικό-πληροφορική",
+      "Γ. Τεχνοκρατικό-μέσο στήριξης & αντικείμενο, Ολιστικό-μέσο στήριξης, Πραγματολογικό-πληροφορική",
+      "Δ. Τεχνοκρατικό-πληροφορική, Ολιστικό-μέσο στήριξης & αντικείμενο, Πραγματολογικό-μέσο στήριξης"
+    ], correct: ["Α. Τεχνοκρατικό-πληροφορική, Ολιστικό-μέσο στήριξης, Πραγματολογικό-μέσο στήριξης & αντικείμενο"] },
+  // 8
+  { id: 8, type: "single", text: "Ορθή αντιστοίχιση για τεχνοκεντρική (Τ), πραγματολογική (Π), ολιστική (Ο) προσέγγιση:", options: [
+      "Α) ... (Τ), (Ο), (Π), (Π), (Ο).",
+      "Β) ... (Ο), (Π), (Τ), (Ο), (Τ).",
+      "Γ) ... (Π), (Τ), (Ο), (Τ), (Π)."
+    ], correct: ["Β) ... (Ο), (Π), (Τ), (Ο), (Τ)."] },
+  // 9
+  { id: 9, type: "single", text: "Οι ΤΠΕ στην εκπαίδευση αποτελούν:", options: ["Α) Μέσα διδασκαλίας","Β) Μεθόδους διδασκαλίας","Γ) Ενεργητικές μέθοδοι"], correct: ["Α) Μέσα διδασκαλίας"] },
+  // 10
+  { id: 10, type: "single", text: "Προτεραιότητα για το σημερινό σχολείο:", options: ["Α) Αξιοποίηση πληροφορικής","Β) Τμήματα χαρισματικών","Γ) Αύξηση κατ' οίκον εργασιών","Δ) Δεξιότητες, κριτική σκέψη & συνεργασία"], correct: ["Δ) Δεξιότητες, κριτική σκέψη & συνεργασία"] },
+  // 11
+  { id: 11, type: "single", text: "Οι ΤΠΕ είναι αποτελεσματικές όταν κυρίως:", options: ["Α) Υλικοτεχνικές υποδομές","Β) Καλό υλικό μαθητών","Γ) Ο εκπαιδευτικός γνωρίζει πώς/πού/πότε"], correct: ["Γ) Ο εκπαιδευτικός γνωρίζει πώς/πού/πότε"] },
+  // 12
+  { id: 12, type: "boolean", text: "Ο όρος ICT literacy = εξοικείωση με υπολογιστές & λογισμικά, κατάρτιση σε τεχνολογικές δεξιότητες.", options: ["ΣΩΣΤΟ","ΛΑΘΟΣ"], correct: ["ΛΑΘΟΣ"] },
+  // 13
+  { id: 13, type: "single", text: "Γνωστική/κοινωνικογνωστική σύγκρουση με ΤΠΕ: τι κάνει ο/η εκπαιδευτικός;", options: ["1) Αποφεύγει ΤΠΕ.","2) Προλαμβάνει τη σύγκρουση πριν εντάξει ΤΠΕ.","3) Χρησιμοποιεί ΤΠΕ ώστε να αναδειχθούν και να επιλυθούν."], correct: ["3) Χρησιμοποιεί ΤΠΕ ώστε να αναδειχθούν και να επιλυθούν."] },
+  // 14
+  { id: 14, type: "single", text: "Αναζήτηση που απαιτεί υποχρεωτικά δύο λέξεις – τελεστής:", options: ["1) AND","2) OR","3) NOT"], correct: ["1) AND"] },
+  // 15
+  { id: 15, type: "boolean", text: "Όλες οι μηχανές αναζήτησης συλλέγουν πληροφορίες με παρόμοιο μηχανισμό και δίνουν τα ίδια αποτελέσματα.", options: ["ΣΩΣΤΟ","ΛΑΘΟΣ"], correct: ["ΛΑΘΟΣ"] },
+  // 16
+  { id: 16, type: "single", text: "Ποια πρόταση για τις μηχανές αναζήτησης είναι σωστή;", options: ["1) Μόνο (α)","2) Μόνο (β)","3) Καμία","4) Και οι δύο"], correct: ["2) Μόνο (β)"] },
+  // 17
+  { id: 17, type: "single", text: "Σημαντικότερα κριτήρια αξιολόγησης ιστοσελίδας/ιστοχώρου:", options: ["Α) 1, 2, 3","Β) 2, 3, 4","Γ) 1, 3, 4"], correct: ["Α) 1, 2, 3"] },
+  // 18
+  { id: 18, type: "single", text: "Πλέον σημαντική οδηγία για κριτική χρήση Διαδικτύου:", options: ["1) Η πληρέστερη ή εξειδικευμένη μηχανή/ΒΔ","2) Διασταύρωση πληροφοριών από ≥2 πηγές","3) Οι πληροφορίες για επιστημονικά γεγονότα είναι apriori έγκυρες"], correct: ["2) Διασταύρωση πληροφοριών από ≥2 πηγές"] },
+  // 19
+  { id: 19, type: "single", text: "Ασφαλής χρήση ψηφιακών πόρων/πλοήγησης: ποια πρόταση είναι ορθή;", options: [
+      "Α) Μόνη λύση: πλήρης απαγόρευση πρόσβασης",
+      "Β) Διαπαιδαγώγηση & κοινή εξερεύνηση ασφαλών πόρων/δραστηριοτήτων",
+      "Γ) Κίνδυνος παραπληροφόρησης είναι ίδιος για όλους"
+    ], correct: ["Β) Διαπαιδαγώγηση & κοινή εξερεύνηση ασφαλών πόρων/δραστηριοτήτων"] },
+  // 20
+  { id: 20, type: "single", text: "Υπάρχει copyright στο Διαδίκτυο;", options: ["ΝΑΙ","ΟΧΙ"], correct: ["ΝΑΙ"] },
+  // 21
+  { id: 21, type: "single", text: "Ποιο θεωρείται ως πιο σημαντικό όφελος που δικαιολογεί την επένδυση χρόνου/προσπάθειας;", options: [
+      "Α) Υπολογισμοί γρήγορα/αξιόπιστα/αλάνθαστα",
+      "Β) Εκχώρηση χρονοβόρων διαδικασιών στον Η/Υ",
+      "Γ) Ανάπτυξη δεξιοτήτων & γνώσεων μέσω νέων μαθησιακών περιβαλλόντων"
+    ], correct: ["Γ) Ανάπτυξη δεξιοτήτων & γνώσεων μέσω νέων μαθησιακών περιβαλλόντων"] },
+  // 22
+  { id: 22, type: "single", text: "Γνωστικά εργαλεία: ποια πρόταση είναι σωστή;", options: ["1) Η (Α) είναι σωστή.","2) Η (Β) είναι σωστή.","3) Καμία δεν είναι σωστή."], correct: ["2) Η (Β) είναι σωστή."] },
+  // 23
+  { id: 23, type: "boolean", text: "«Εκπαιδευτικό ψηφιακό περιβάλλον»: εφαρμογές που υποστηρίζουν τη διδασκαλία & μάθηση.", options: ["ΣΩΣΤΟ","ΛΑΘΟΣ"], correct: ["ΣΩΣΤΟ"] },
+  // 24
+  { id: 24, type: "single", text: "Ποιο είδος διδασκαλίας ταιριάζει με πολυμεσικές εφαρμογές που προσφέρουν περιεχόμενο/πλοήγηση/ασκήσεις;", options: [
+      "Α) Καθοδήγηση & παροχή πληροφοριών","Β) Ανοιχτή διδασκαλία/project","Γ) Ανακαλυπτική μάθηση"
+    ], correct: ["Α) Καθοδήγηση & παροχή πληροφοριών"] },
+  // 25
+  { id: 25, type: "single", text: "Σχόλιο για εκπαιδευτικό που χρησιμοποιεί κυρίως «εφαρμογές γραφείου» & Internet:", options: [
+      "Α) Χρήση ΤΠΕ σε μεγάλο εύρος, αλλά εντάσσονται σε παραδοσιακό, δασκαλοκεντρικό στυλ.",
+      "Β) Χρήση ΤΠΕ σε βάθος για σύγχρονο, ζωντανό μάθημα."
+    ], correct: ["Α) Χρήση ΤΠΕ σε μεγάλο εύρος, αλλά εντάσσονται σε παραδοσιακό, δασκαλοκεντρικό στυλ."] },
+  // 26 (multiple)
+  { id: 26, type: "multiple", text: "Σημαντικότερες αντιρρήσεις για χρήση λογισμικού παρουσιάσεων:", options: [
+      "Α) Ευνοεί την εικόνα έναντι του κειμένου",
+      "Β) Κατάχρηση εφέ/χρωμάτων/φόντου",
+      "Γ) Ακατάλληλο για μεγαλύτερες τάξεις",
+      "Δ) «Τηλεοπτική» οργάνωση ύλης",
+      "Ε) Δεν δίνει δυνατότητα συνεργατικών δραστηριοτήτων"
+    ], correct: ["Α) Ευνοεί την εικόνα έναντι του κειμένου","Β) Κατάχρηση εφέ/χρωμάτων/φόντου","Δ) «Τηλεοπτική» οργάνωση ύλης"] },
+  // 27
+  { id: 27, type: "single", text: "Ψηφιακή Υποστήριξη της Διδασκαλίας — ποια πρόταση είναι σωστή;", options: ["Α) Βοήθεια προς μαθητευόμενο για προκαθορισμένους στόχους χαμηλού επιπέδου.","Β) Ενίσχυση γνώσεων & δεξιοτήτων υψηλού επιπέδου για σύγχρονο κόσμο."], correct: ["Α) Βοήθεια προς μαθητευόμενο για προκαθορισμένους στόχους χαμηλού επιπέδου."] },
+  // 28
+  { id: 28, type: "single", text: "Εντοπίστε τη λανθασμένη πρόταση για γνωστικά εργαλεία:", options: [
+      "1) Όταν δεν έχουν συγκεκριμένο περιεχόμενο, αλλά προσφέρουν περιβάλλον για μάθηση.",
+      "2) Όταν χρησιμοποιούνται κυρίως για παρουσίαση πληροφοριών.",
+      "3) Όταν είναι ανοιχτό μαθησιακό περιβάλλον.",
+      "4) Όταν μπορούν να χρησιμοποιηθούν για διερευνητικές δραστηριότητες."
+    ], correct: ["2) Όταν χρησιμοποιούνται κυρίως για παρουσίαση πληροφοριών."] },
+  // 29
+  { id: 29, type: "single", text: "Τα συστήματα πληροφόρησης & καθοδηγούμενης διδασκαλίας είναι συνήθως:", options: ["Α) Κλειστού τύπου","Β) Ανοικτού τύπου","Γ) Μεικτού τύπου"], correct: ["Α) Κλειστού τύπου"] },
+  // 30
+  { id: 30, type: "boolean", text: "Εκπαιδευτικό λογισμικό μπορεί να αξιολογηθεί πλήρως από ειδικούς χωρίς να λαμβάνεται υπόψη το εκπαιδευτικό πλαίσιο.", options: ["ΣΩΣΤΟ","ΛΑΘΟΣ"], correct: ["ΛΑΘΟΣ"] },
+];
+
+// ===== Rendering =====
+const $quiz = document.getElementById('quiz');
+const $score = document.getElementById('score');
+const $total = document.getElementById('total');
+$total.textContent = QUESTIONS.length;
+
+let score = 0;
+
+function renderQuestion(q) {
+  const wrap = document.createElement('div');
+  wrap.className = 'q';
+  wrap.dataset.id = q.id;
+  wrap.dataset.type = q.type;
+
+  const title = document.createElement('div');
+  title.innerHTML = `<span class="qid">#${q.id}</span> <span class="qtext">${q.text}</span>`;
+  wrap.appendChild(title);
+
+  const opts = document.createElement('div');
+  opts.className = 'opts';
+
+  const isMultiple = q.type === 'multiple';
+  const controlType = isMultiple ? 'checkbox' : 'radio';
+  const name = `q${q.id}`;
+
+  q.options.forEach((optText, idx) => {
+    const opt = document.createElement('label');
+    opt.className = 'opt';
+    const input = document.createElement('input');
+    input.type = controlType;
+    input.name = name;
+    input.value = optText;
+
+    const span = document.createElement('span');
+    span.textContent = optText;
+
+    opt.appendChild(input);
+    opt.appendChild(span);
+    opts.appendChild(opt);
+  });
+
+  wrap.appendChild(opts);
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'secondary';
+  resetBtn.type = 'button';
+  resetBtn.textContent = 'Επαναφορά';
+  resetBtn.addEventListener('click', () => resetQuestion(wrap, q));
+  actions.appendChild(resetBtn);
+
+  wrap.appendChild(actions);
+
+  // Event delegation for immediate feedback
+  opts.addEventListener('change', (e) => {
+    if (!e.target || e.target.tagName !== 'INPUT') return;
+    applyFeedback(wrap, q);
+  });
+
+  return wrap;
+}
+
+function arraysEqual(a, b) {
+  if (a.length !== b.length) return false;
+  const sa = [...a].sort();
+  const sb = [...b].sort();
+  return sa.every((v, i) => v === sb[i]);
+}
+
+function applyFeedback(wrap, q) {
+  const selected = Array.from(wrap.querySelectorAll('input:checked')).map(i => i.value);
+  const labels = Array.from(wrap.querySelectorAll('.opt'));
+
+  // clear previous styles
+  labels.forEach(l => l.classList.remove('correct','wrong'));
+
+  if (q.type === 'multiple') {
+    // mark any wrongly selected as wrong
+    labels.forEach(l => {
+      const val = l.querySelector('input').value;
+      if (selected.includes(val) && !q.correct.includes(val)) {
+        l.classList.add('wrong');
+      }
+    });
+    // mark correct ones that are selected as correct
+    labels.forEach(l => {
+      const val = l.querySelector('input').value;
+      if (selected.includes(val) && q.correct.includes(val)) {
+        l.classList.add('correct');
+      }
+    });
+    // full correctness check
+    const previouslySolved = wrap.dataset.solved === 'true';
+    if (arraysEqual(selected, q.correct)) {
+      labels.forEach(l => {
+        const val = l.querySelector('input').value;
+        if (q.correct.includes(val)) l.classList.add('correct');
+        l.classList.add('disabled');
+      });
+      if (!previouslySolved) { score++; updateScore(); }
+      wrap.dataset.solved = 'true';
+    }
+  } else {
+    const choice = selected[0];
+    const correct = q.correct[0];
+    const allLabels = Array.from(wrap.querySelectorAll('.opt'));
+    allLabels.forEach(l => {
+      const val = l.querySelector('input').value;
+      if (val === choice) {
+        l.classList.add(val === correct ? 'correct' : 'wrong');
+      }
+      if (val === correct) {
+        // If clicked wrong, still highlight the correct one subtly
+        if (choice !== correct) {
+          l.classList.add('correct');
+        }
+      }
+    });
+    // disable on correct
+    const previouslySolved = wrap.dataset.solved === 'true';
+    if (choice === correct) {
+      allLabels.forEach(l => l.classList.add('disabled'));
+      if (!previouslySolved) { score++; updateScore(); }
+      wrap.dataset.solved = 'true';
+    }
+  }
+}
+
+function resetQuestion(wrap, q) {
+  wrap.dataset.solved = 'false';
+  wrap.querySelectorAll('input').forEach(i => { i.checked = false; i.disabled = false; });
+  wrap.querySelectorAll('.opt').forEach(l => l.classList.remove('correct','wrong','disabled'));
+  recalcScore();
+}
+
+function updateScore() {
+  $score.textContent = score;
+}
+
+function recalcScore() {
+  const solved = Array.from(document.querySelectorAll('.q')).filter(qn => qn.dataset.solved === 'true').length;
+  score = solved;
+  updateScore();
+}
+
+function init() {
+  QUESTIONS.forEach(q => $quiz.appendChild(renderQuestion(q)));
+}
+
+init();
+</script>
+</body>
+</html>
